@@ -1,0 +1,153 @@
+// Prisma schema for Crypto Signals Tracker
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// Legacy price data (kept for backward compatibility)
+model Price {
+  id        Int      @id @default(autoincrement())
+  asset     String   @db.VarChar(10) // BTC, ETH
+  ts        DateTime @db.Timestamp(0)
+  open      Decimal  @db.Decimal(20, 8)
+  high      Decimal  @db.Decimal(20, 8)
+  low       Decimal  @db.Decimal(20, 8)
+  close     Decimal  @db.Decimal(20, 8)
+  volume    Decimal  @db.Decimal(30, 8)
+  source    String   @db.VarChar(50) // coingecko, etc.
+  createdAt DateTime @default(now())
+
+  @@unique([asset, ts, source])
+  @@index([asset, ts])
+  @@map("prices")
+}
+
+// Price candles with timeframe support
+model PriceCandle {
+  id        Int      @id @default(autoincrement())
+  asset     String   @db.VarChar(20) // BTC, ETH, SOL, XRP, GLD, QQQ, etc.
+  timeframe String   @db.VarChar(10) // "1h", "1d"
+  ts        DateTime @db.Timestamp(0) // UTC datetime
+  open      Decimal  @db.Decimal(20, 8)
+  high      Decimal  @db.Decimal(20, 8)
+  low       Decimal  @db.Decimal(20, 8)
+  close     Decimal  @db.Decimal(20, 8)
+  volume    Decimal? @db.Decimal(30, 8)
+  source    String   @db.VarChar(50) // coingecko, stooq, etc.
+  createdAt DateTime @default(now())
+
+  @@unique([asset, timeframe, ts, source])
+  @@index([asset, timeframe, ts])
+  @@map("price_candles")
+}
+
+// Current state of each signal
+model SignalState {
+  id        Int      @id @default(autoincrement())
+  signalId  String   @db.VarChar(50) // e.g., "funding_rate", "rsi_14"
+  asset     String   @db.VarChar(10) // BTC, ETH, or GLOBAL for macro signals
+  ts        DateTime @db.Timestamp(0)
+  state     String   @db.VarChar(20) // STRONG_BUY, BUY, NEUTRAL, SELL, STRONG_SELL
+  rawJson   Json? // Raw data used for computation
+  createdAt DateTime @default(now())
+
+  @@index([signalId, asset, ts])
+  @@index([signalId, asset])
+  @@map("signal_states")
+}
+
+// State transitions (events)
+model SignalEvent {
+  id           Int             @id @default(autoincrement())
+  signalId     String          @db.VarChar(50)
+  asset        String          @db.VarChar(10)
+  ts           DateTime        @db.Timestamp(0)
+  prevState    String          @db.VarChar(20)
+  newState     String          @db.VarChar(20)
+  entryPrice   Decimal         @db.Decimal(20, 8)
+  horizonsJson Json // Array of horizons to evaluate: ["1D", "7D", "30D"]
+  createdAt    DateTime        @default(now())
+  outcomes     SignalOutcome[]
+
+  @@unique([signalId, asset, ts, newState])
+  @@index([signalId, asset])
+  @@index([ts])
+  @@map("signal_events")
+}
+
+// Evaluation results after horizons mature
+model SignalOutcome {
+  id            Int         @id @default(autoincrement())
+  eventId       Int
+  horizon       String      @db.VarChar(10) // 1D, 7D, 30D
+  exitTs        DateTime    @db.Timestamp(0)
+  exitPrice     Decimal     @db.Decimal(20, 8)
+  forwardReturn Decimal     @db.Decimal(10, 6) // Percentage as decimal
+  success       Boolean? // null if NEUTRAL, true/false based on threshold
+  createdAt     DateTime    @default(now())
+  event         SignalEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, horizon])
+  @@index([eventId])
+  @@map("signal_outcomes")
+}
+
+// Aggregated statistics per signal/asset/horizon
+model SignalStats {
+  id        Int      @id @default(autoincrement())
+  signalId  String   @db.VarChar(50)
+  asset     String   @db.VarChar(10)
+  horizon   String   @db.VarChar(10) // 1D, 7D, 30D
+  window    String   @db.VarChar(10) // 90d, 365d
+  nEvents   Int      @default(0)
+  hitRate   Decimal? @db.Decimal(5, 4) // e.g., 0.6543 = 65.43%
+  avgReturn Decimal? @db.Decimal(10, 6)
+  updatedAt DateTime @updatedAt
+
+  @@unique([signalId, asset, horizon, window])
+  @@index([signalId, asset])
+  @@map("signal_stats")
+}
+
+// Job run tracking with locking
+model JobRun {
+  id         Int       @id @default(autoincrement())
+  jobName    String    @db.VarChar(50) // hourly, daily, weekly
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  status     String    @db.VarChar(20) @default("running") // running, completed, failed
+  errorJson  Json?
+  lockKey    String    @db.VarChar(20) // YYYYMMDDHH for hourly, YYYYMMDD for daily
+
+  @@unique([jobName, lockKey])
+  @@index([jobName, status])
+  @@map("job_runs")
+}
+
+// Signal snapshots for audit, learning, and explanations
+model SignalSnapshot {
+  id                Int      @id @default(autoincrement())
+  snapshotTs        DateTime @db.Timestamp(0) // UTC datetime of snapshot
+  asset             String   @db.VarChar(20) // BTC, ETH, SOL, XRP, GLOBAL
+  horizonBucket     String   @db.VarChar(10) // "short", "mid", "long"
+  signalId          String   @db.VarChar(50)
+  state             String   @db.VarChar(30) // Signal state
+  evidenceJson      Json     // Numeric inputs + thresholds used
+  justificationJson Json     // Structured explanation + optional LLM text
+  entryPrice        Decimal? @db.Decimal(20, 8)
+  priceSource       String?  @db.VarChar(50)
+  signalVersion     String   @db.VarChar(20) @default("1.0")
+  dataVersion       String   @db.VarChar(20) @default("1.0")
+  promptVersion     String?  @db.VarChar(20) // Optional LLM prompt version
+  createdAt         DateTime @default(now())
+
+  @@unique([snapshotTs, asset, horizonBucket, signalId])
+  @@index([asset, horizonBucket])
+  @@index([signalId, snapshotTs])
+  @@map("signal_snapshots")
+}
+

@@ -1,0 +1,183 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-tertiary: #1a1a24;
+  --border-color: #2a2a3a;
+  --text-primary: #e0e0e0;
+  --text-secondary: #9ca3af;
+  --accent-purple: #8B5CF6;
+  --accent-cyan: #06B6D4;
+  --accent-green: #10B981;
+  --accent-red: #EF4444;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+body {
+  min-height: 100vh;
+  background: 
+    radial-gradient(ellipse at 20% 0%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 100%, rgba(6, 182, 212, 0.06) 0%, transparent 50%),
+    linear-gradient(180deg, #0a0a0f 0%, #0f0f18 100%);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3a4a;
+}
+
+/* Signal state badges */
+.signal-badge {
+  @apply px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider;
+}
+
+.signal-strong-buy {
+  @apply bg-emerald-500/20 text-emerald-400 border border-emerald-500/30;
+}
+
+.signal-buy {
+  @apply bg-green-500/20 text-green-400 border border-green-500/30;
+}
+
+.signal-neutral {
+  @apply bg-gray-500/20 text-gray-400 border border-gray-500/30;
+}
+
+.signal-sell {
+  @apply bg-orange-500/20 text-orange-400 border border-orange-500/30;
+}
+
+.signal-strong-sell {
+  @apply bg-red-500/20 text-red-400 border border-red-500/30;
+}
+
+/* Context-only signal states */
+.signal-hedge-on {
+  @apply bg-amber-500/20 text-amber-400 border border-amber-500/30;
+}
+
+.signal-risk-on {
+  @apply bg-emerald-500/20 text-emerald-400 border border-emerald-500/30;
+}
+
+.signal-risk-off {
+  @apply bg-rose-500/20 text-rose-400 border border-rose-500/30;
+}
+
+/* Card styles */
+.card {
+  @apply bg-dark-card border border-dark-border rounded-xl;
+  backdrop-filter: blur(10px);
+}
+
+.card-glow {
+  box-shadow: 
+    0 0 0 1px rgba(139, 92, 246, 0.1),
+    0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.card-glow:hover {
+  box-shadow: 
+    0 0 0 1px rgba(139, 92, 246, 0.2),
+    0 8px 30px rgba(139, 92, 246, 0.1);
+}
+
+/* Grid pattern background */
+.grid-pattern {
+  background-image: 
+    linear-gradient(rgba(139, 92, 246, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 92, 246, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Glow effects */
+.glow-purple {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+}
+
+.glow-cyan {
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+}
+
+/* Animation utilities */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-delay-100 { animation-delay: 100ms; }
+.animate-delay-200 { animation-delay: 200ms; }
+.animate-delay-300 { animation-delay: 300ms; }
+.animate-delay-400 { animation-delay: 400ms; }
+.animate-delay-500 { animation-delay: 500ms; }
+
+/* Price display */
+.price-positive {
+  @apply text-emerald-400;
+}
+
+.price-negative {
+  @apply text-red-400;
+}
+
+/* Table styles */
+.data-table {
+  @apply w-full;
+}
+
+.data-table th {
+  @apply text-left text-xs font-medium text-dark-muted uppercase tracking-wider py-3 px-4 border-b border-dark-border;
+}
+
+.data-table td {
+  @apply py-3 px-4 border-b border-dark-border/50 text-sm;
+}
+
+.data-table tr:hover td {
+  @apply bg-dark-border/20;
+}
+
+/* Nav link styles */
+.nav-link {
+  @apply px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200;
+  @apply text-dark-muted hover:text-white hover:bg-dark-border/50;
+}
+
+.nav-link.active {
+  @apply text-white bg-accent-primary/20 border border-accent-primary/30;
+}
+

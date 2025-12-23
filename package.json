@@ -1,0 +1,35 @@
+{
+  "name": "crypto-signals",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "db:generate": "prisma generate --schema=./prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema=./prisma/schema.prisma",
+    "db:push": "prisma db push --schema=./prisma/schema.prisma",
+    "db:studio": "prisma studio --schema=./prisma/schema.prisma",
+    "worker:dev": "npm run dev --workspace=apps/worker",
+    "web:dev": "npm run dev --workspace=apps/web",
+    "worker:build": "npm run build --workspace=apps/worker",
+    "web:build": "npm run build --workspace=apps/web"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "prisma": "^5.7.0",
+    "turbo": "^1.11.0",
+    "typescript": "^5.3.2"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+

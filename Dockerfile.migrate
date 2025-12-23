@@ -1,0 +1,21 @@
+# Migration runner Dockerfile
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies for Prisma
+RUN apk add --no-cache libc6-compat openssl
+
+# Copy package files
+COPY package.json package-lock.json* ./
+COPY prisma ./prisma
+
+# Install dependencies (only prisma needed)
+RUN npm ci --only=production
+
+# Generate Prisma client
+RUN npx prisma generate --schema=./prisma/schema.prisma
+
+# Run migrations
+CMD ["npx", "prisma", "migrate", "deploy", "--schema=./prisma/schema.prisma"]
+

@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: crypto-signals-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-cryptosignals123}
+      MYSQL_DATABASE: crypto_signals
+      MYSQL_USER: crypto
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-cryptosignals123}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - crypto-network
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: crypto-signals-web
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=mysql://crypto:${MYSQL_PASSWORD:-cryptosignals123}@mysql:3306/crypto_signals
+      - JOB_TOKEN=${JOB_TOKEN:-your_job_token_here}
+      - COINGLASS_API_KEY=${COINGLASS_API_KEY:-}
+      - FRED_API_KEY=${FRED_API_KEY:-}
+      - NODE_ENV=production
+    ports:
+      - "3000:3000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - crypto-network
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: crypto-signals-worker
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=mysql://crypto:${MYSQL_PASSWORD:-cryptosignals123}@mysql:3306/crypto_signals
+      - COINGLASS_API_KEY=${COINGLASS_API_KEY:-}
+      - FRED_API_KEY=${FRED_API_KEY:-}
+      - NODE_ENV=production
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - crypto-network
+    command: ["node", "dist/index.js", "cron"]
+
+  # One-time migration runner
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrate
+    container_name: crypto-signals-migrate
+    environment:
+      - DATABASE_URL=mysql://crypto:${MYSQL_PASSWORD:-cryptosignals123}@mysql:3306/crypto_signals
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - crypto-network
+
+volumes:
+  mysql_data:
+
+networks:
+  crypto-network:
+    driver: bridge
+

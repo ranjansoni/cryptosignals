@@ -1,0 +1,61 @@
+# Worker application Dockerfile
+FROM node:20-alpine AS base
+
+# Install dependencies
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Copy root package files
+COPY package.json package-lock.json* ./
+COPY turbo.json ./
+COPY tsconfig.json ./
+
+# Copy workspace package.json files
+COPY apps/worker/package.json ./apps/worker/
+COPY packages/shared/package.json ./packages/shared/
+
+# Copy prisma schema
+COPY prisma ./prisma
+
+# Install dependencies
+RUN npm ci
+
+# Build stage
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate --schema=./prisma/schema.prisma
+
+# Build shared package
+WORKDIR /app/packages/shared
+RUN npm run build
+
+# Build worker
+WORKDIR /app/apps/worker
+RUN npm run build
+
+# Production image
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV production
+
+# Copy necessary files
+COPY --from=builder /app/apps/worker/dist ./dist
+COPY --from=builder /app/apps/worker/package.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/shared/dist ./node_modules/@crypto-signals/shared/dist
+COPY --from=builder /app/packages/shared/package.json ./node_modules/@crypto-signals/shared/
+
+# Copy Prisma client
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+EXPOSE 3001
+
+CMD ["node", "dist/index.js"]
+
